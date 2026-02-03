@@ -12,3 +12,99 @@ generator client {
 datasource db {
   provider = "postgresql"
  }
+
+enum UserType {
+  STUDENT
+  STAFF
+}
+
+enum Role {
+  VOTER
+  ADMIN
+}
+
+enum ElectionStatus {
+  DRAFT
+  ONGOING
+  COMPLETED
+}
+
+model User {
+  id                   String          @id @default(cuid())
+  email                String          @unique
+  identificationNumber String          @unique // Matric No or Staff ID
+  name                 String
+  userType             UserType
+  role                 Role            @default(VOTER)
+  
+  // Biometrics
+  authenticators       Authenticator[]
+  secretPin            String?         // Hashed PIN
+  otpCode              String?
+  otpExpiresAt         DateTime?
+  
+  voterRecords         VoterRecord[]
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+}
+
+model Authenticator {
+  id           String @id @default(cuid())
+  credentialID String @unique
+  publicKey    Bytes
+  counter      Int
+  userId       String
+  user         User   @relation(fields: [userId], references: [id])
+}
+
+model Election {
+  id            String         @id @default(cuid())
+  title         String
+  status        ElectionStatus @default(DRAFT)
+  eligibleTypes UserType[]     
+  positions     Position[]
+  voterRecords  VoterRecord[]
+  ballots       Ballot[]
+  createdAt DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Position {
+  id         String      @id @default(cuid())
+  name       String      // e.g. "President"
+  electionId String
+  election   Election    @relation(fields: [electionId], references: [id])
+  candidates Candidate[]
+}
+
+model Candidate {
+  id         String   @id @default(cuid())
+  name       String
+  bio        String?
+  imageUrl   String?
+  positionId String
+  position   Position @relation(fields: [positionId], references: [id])
+  ballots    Ballot[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model VoterRecord {
+  id         String   @id @default(cuid())
+  userId     String
+  electionId String
+  votedAt    DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id])
+  election   Election @relation(fields: [electionId], references: [id])
+
+  @@unique([userId, electionId])
+}
+
+model Ballot {
+  id          String   @id @default(cuid())
+  electionId  String
+  positionId  String
+  candidateId String
+  election    Election @relation(fields: [electionId], references: [id])
+  candidate   Candidate @relation(fields: [candidateId], references: [id])
+}
