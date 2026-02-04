@@ -39,7 +39,10 @@ model User {
   
   // Biometrics
   authenticators       Authenticator[]
+  currentChallenge      String?
   secretPin            String?         // Hashed PIN
+
+  //otp
   otpCode              String?
   otpExpiresAt         DateTime?
   
