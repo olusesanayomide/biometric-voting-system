@@ -26,7 +26,7 @@ export class AuthService {
       attestationType: 'none',
       // Prevent registering the same device twice
       excludeCredentials: user.authenticators.map((auth) => ({
-        id: base64url.toBuffer(auth.credentialID),
+        id: auth.credentialID,
         type: 'public-key',
       })),
       authenticatorSelection: {
@@ -52,8 +52,8 @@ export class AuthService {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
     });
-    const storedChallenge = user?.currentChallenge;
-    if (!storedChallenge) {
+    const { currentChallenge = '' } = user ?? {};
+    if (!currentChallenge) {
       throw new BadRequestException(
         'Registration session expired or not found',
       );
@@ -61,7 +61,7 @@ export class AuthService {
 
     const Verification = await verifyRegistrationResponse({
       response: body,
-      expectedChallenge: storedChallenge as string,
+      expectedChallenge: currentChallenge as string,
       expectedOrigin: 'http://localhost:3000', // Use your frontend origin in production
       expectedRPID: 'localhost', // Use your domain in production
     });
@@ -74,7 +74,7 @@ export class AuthService {
       // Store the authenticator in the database
       await this.prisma.authenticator.create({
         data: {
-          userId: user.id,
+          userId: userId,
           credentialID: credentialID,
           publicKey: Buffer.from(credentialPublicKey),
           counter,
