@@ -2,6 +2,7 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ConfigService } from '@nestjs/config';
+import { PrismaService } from 'src/prisma/prisma.service';
 
 interface JwtPayload {
   sub: string;
@@ -12,8 +13,10 @@ interface JwtPayload {
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  prisma: any;
-  constructor(private configService: ConfigService) {
+  constructor(
+    private configService: ConfigService,
+    private prismaService: PrismaService,
+  ) {
     super({
       //Tells pasport where to look for the token
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
@@ -25,11 +28,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   // this method run after the token has ben decrypted
   //what ever is returned here is what nestjs attaches to a request
   async validate(payload: JwtPayload) {
-    const user = await this.prisma.user.findUnique({
+    const user = await this.prismaService.user.findUnique({
       where: { id: payload.sub },
     });
-    if (!payload) {
-      throw new UnauthorizedException('Invalid token');
+    if (!user) {
+      throw new UnauthorizedException('User Not Found ');
     }
     return user;
   }
