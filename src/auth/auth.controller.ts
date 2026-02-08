@@ -1,20 +1,39 @@
-import { Controller, Post, Param } from '@nestjs/common';
+import { Controller, Post, Body, Get, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { GetUser } from './decorators/get-user.decorator'; // You'll need this decorator
+import * as server from '@simplewebauthn/server';
 
-ApiTags('Authentication');
+@ApiTags('Authentication')
 @Controller('auth')
 export class AuthController {
-  constructor(private AuthService: AuthService) {}
+  constructor(private readonly authService: AuthService) {}
 
-  @Post('register/challenge/:userid')
-  @ApiOperation({ summary: 'Generate registration challenge for a user' })
-  @ApiResponse({
-    status: 201,
-    description: 'Registration challenge generated successfully',
+  @Post('login-pin')
+  @ApiOperation({ summary: 'Login with ID and PIN to get JWT' })
+  async login(@Body() body: { identificationNumber: string; pin: string }) {
+    return this.authService.loginWithPin(body.identificationNumber, body.pin);
+  }
+
+  @ApiBearerAuth() // Tells Swagger this needs a token
+  @UseGuards(JwtAuthGuard)
+  @Get('register/challenge') // Removed :userid for security
+  @ApiOperation({
+    summary: 'Generate registration challenge for the logged-in user',
   })
-  @ApiResponse({ status: 404, description: 'User not found' })
-  async getRegistrationChallenge(@Param('userid') userId: string) {
-    return this.AuthService.getRegistrationOptions(userId);
+  async getRegistrationChallenge(@GetUser('id') userId: string) {
+    return this.authService.getRegistrationOptions(userId);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Post('register/verify')
+  @ApiOperation({ summary: 'Verify and save biometric registration' })
+  async verifyRegistration(
+    @GetUser('id') userId: string,
+    @Body() body: server.RegistrationResponseJSON,
+  ) {
+    return this.authService.verifyRegistrationResponse(userId, body);
   }
 }
