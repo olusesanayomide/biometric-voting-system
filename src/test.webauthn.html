@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>WebAuthn Test</title>
+    <script src="https://unpkg.com/@simplewebauthn/browser/dist/bundle/index.umd.min.js"></script>
+    <style>
+        body { font-family: sans-serif; padding: 20px; line-height: 1.6; }
+        .box { border: 1px solid #ccc; padding: 15px; margin-bottom: 10px; border-radius: 8px; }
+        input { padding: 8px; width: 250px; }
+        button { padding: 8px 15px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; }
+        pre { background: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h2>1. Login with PIN (Get JWT)</h2>
+    <div class="box">
+        <input type="text" id="idNumber" placeholder="Identification Number (Matric No)">
+        <input type="password" id="pin" placeholder="PIN">
+        <button onclick="login()">Login</button>
+    </div>
+
+    <h2>2. Register Biometric</h2>
+    <div class="box">
+        <button id="regBtn" onclick="registerBiometric()" disabled>Start Registration</button>
+        <p id="status">Login first to enable registration</p>
+    </div>
+
+    <h3>Output Log:</h3>
+    <pre id="log">Waiting for action...</pre>
+
+    <script>
+        const { startRegistration } = SimpleWebAuthnBrowser;
+        let jwt = '';
+
+        function log(msg) {
+            document.getElementById('log').innerText = typeof msg === 'object' ? JSON.stringify(msg, null, 2) : msg;
+        }
+
+        async function login() {
+            const id = document.getElementById('idNumber').value;
+            const pin = document.getElementById('pin').value;
+
+            try {
+                const response = await fetch('http://localhost:3000/auth/login-pin', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ identificationNumber: id, pin })
+                });
+
+                const data = await response.json();
+                if (data.access_token) {
+                    jwt = data.access_token;
+                    document.getElementById('regBtn').disabled = false;
+                    document.getElementById('status').innerText = "Logged in! You can now register biometrics.";
+                    log("Login Success! Token received.");
+                } else {
+                    log("Login failed: " + JSON.stringify(data));
+                }
+            } catch (err) {
+                log("Error: " + err.message);
+            }
+        }
+
+        async function registerBiometric() {
+            try {
+                log("Fetching registration options...");
+                // 1. Get options from backend
+                const optionsRes = await fetch('http://localhost:3000/auth/register/challenge', {
+                    headers: { 'Authorization': `Bearer ${jwt}` }
+                });
+                const optionsJSON = await optionsRes.json();
+                log("Options received. Triggering biometric prompt...");
+
+                // 2. Trigger Browser Biometric Prompt
+                const regResponse = await startRegistration(optionsJSON);
+                log("Biometric captured! Sending to server for verification...");
+
+                // 3. Send response back to server
+                const verifyRes = await fetch('http://localhost:3000/auth/register/verify', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${jwt}` 
+                    },
+                    body: JSON.stringify(regResponse)
+                });
+
+                const verifyData = await verifyRes.json();
+                log(verifyData.success ? "SUCCESS: Biometric Registered!" : "FAILED: " + JSON.stringify(verifyData));
+            } catch (err) {
+                log("WebAuthn Error: " + err.name + " - " + err.message);
+            }
+        }
+    </script>
+</body>
+</html>

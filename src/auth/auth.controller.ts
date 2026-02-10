@@ -16,9 +16,9 @@ export class AuthController {
     return this.authService.loginWithPin(body.identificationNumber, body.pin);
   }
 
-  @ApiBearerAuth() // Tells Swagger this needs a token
+  @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
-  @Get('register/challenge') // Removed :userid for security
+  @Get('register/challenge')
   @ApiOperation({
     summary: 'Generate registration challenge for the logged-in user',
   })
