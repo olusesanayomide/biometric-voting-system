@@ -4,7 +4,10 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  app.enableCors();
+  app.enableCors({
+    origin: 'http://localhost:5500', // Or whatever port Live Server is using
+    credentials: true,
+  });
 
   const config = new DocumentBuilder()
     .setTitle('Biometric Voting System API')

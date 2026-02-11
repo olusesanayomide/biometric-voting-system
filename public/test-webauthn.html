@@ -61,36 +61,52 @@
             }
         }
 
-        async function registerBiometric() {
-            try {
-                log("Fetching registration options...");
-                // 1. Get options from backend
-                const optionsRes = await fetch('http://localhost:3000/auth/register/challenge', {
-                    headers: { 'Authorization': `Bearer ${jwt}` }
-                });
-                const optionsJSON = await optionsRes.json();
-                log("Options received. Triggering biometric prompt...");
+       async function registerBiometric() {
+    try {
+        log("Fetching registration options...");
+        
+        // 1. Get options from backend 
+        // IMPORTANT: Ensure this URL matches your @Get or @Post in AuthController
+        const optionsRes = await fetch('http://localhost:3000/auth/register/challenge', {
+            headers: { 'Authorization': `Bearer ${jwt}` }
+        });
 
-                // 2. Trigger Browser Biometric Prompt
-                const regResponse = await startRegistration(optionsJSON);
-                log("Biometric captured! Sending to server for verification...");
-
-                // 3. Send response back to server
-                const verifyRes = await fetch('http://localhost:3000/auth/register/verify', {
-                    method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${jwt}` 
-                    },
-                    body: JSON.stringify(regResponse)
-                });
-
-                const verifyData = await verifyRes.json();
-                log(verifyData.success ? "SUCCESS: Biometric Registered!" : "FAILED: " + JSON.stringify(verifyData));
-            } catch (err) {
-                log("WebAuthn Error: " + err.name + " - " + err.message);
-            }
+        // Check if the server actually returned a 200 OK
+        if (!optionsRes.ok) {
+            const errorData = await optionsRes.json();
+            throw new Error(errorData.message || "Failed to fetch options from server");
         }
+
+        const optionsJSON = await optionsRes.json();
+        
+        // Safety Check: If optionsJSON is undefined or missing challenge, throw error
+        if (!optionsJSON || !optionsJSON.challenge) {
+            throw new Error("Server returned invalid options (missing challenge)");
+        }
+
+        log("Options received. Triggering biometric prompt...");
+
+        // 2. Trigger Browser Biometric Prompt
+        const regResponse = await startRegistration(optionsJSON);
+        log("Biometric captured! Sending to server for verification...");
+
+        // 3. Send response back to server
+        const verifyRes = await fetch('http://localhost:3000/auth/register/verify', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${jwt}` 
+            },
+            body: JSON.stringify(regResponse)
+        });
+
+        const verifyData = await verifyRes.json();
+        log(verifyData.success ? "SUCCESS: Biometric Registered!" : "FAILED: " + JSON.stringify(verifyData));
+    } catch (err) {
+        log("WebAuthn Error: " + err.name + " - " + err.message);
+        console.error(err);
+    }
+}
     </script>
 </body>
 </html>

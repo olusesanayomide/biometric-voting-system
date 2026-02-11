@@ -46,7 +46,10 @@ export class AuthService {
       sub: user.id,
       email: user.email,
     };
-
+    console.log('--- JWT DEBUG ---');
+    console.log('JWT Service defined:', !!this.jwtService);
+    // This will attempt to read the internal config of the service
+    console.log('JWT Secret Check:', (this.jwtService as any).options?.secret);
     // 5. Sign and return
     return {
       access_token: this.jwtService.sign(payload),
@@ -109,7 +112,7 @@ export class AuthService {
     const Verification = await verifyRegistrationResponse({
       response: body,
       expectedChallenge: currentChallenge,
-      expectedOrigin: 'http://localhost:3000', // Use your frontend origin in production
+      expectedOrigin: 'http://localhost:5500', // Use your frontend origin in production
       expectedRPID: 'localhost', // Use your domain in production
     });
     if (Verification.verified && Verification.registrationInfo) {
