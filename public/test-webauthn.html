@@ -25,11 +25,18 @@
         <p id="status">Login first to enable registration</p>
     </div>
 
+    <hr>
+<h2>3. Login with Biometric (Passwordless)</h2>
+<div class="box">
+    <button id="bioLoginBtn" onclick="loginBiometric()" disabled>Login with Fingerprint</button>
+    <p id="bioStatus">Login with PIN first once to enable this button (for testing)</p>
+</div>
+
     <h3>Output Log:</h3>
     <pre id="log">Waiting for action...</pre>
 
     <script>
-        const { startRegistration } = SimpleWebAuthnBrowser;
+        const { startRegistration, startAuthentication } = SimpleWebAuthnBrowser;
         let jwt = '';
 
         function log(msg) {
@@ -39,6 +46,7 @@
         async function login() {
             const id = document.getElementById('idNumber').value;
             const pin = document.getElementById('pin').value;
+            document.getElementById('bioLoginBtn').disabled = false
 
             try {
                 const response = await fetch('http://localhost:3000/auth/login-pin', {
@@ -106,7 +114,50 @@
         log("WebAuthn Error: " + err.name + " - " + err.message);
         console.error(err);
     }
+    
 }
+async function loginBiometric() {
+        try {
+            log("Fetching authentication options...");
+
+            // 1. Get options from backend (Assertion Challenge)
+            const optionsRes = await fetch('http://localhost:3000/auth/login/biometric-options', {
+                headers: { 'Authorization': `Bearer ${jwt}` }
+            });
+
+            if (!optionsRes.ok) throw new Error("Could not fetch login options");
+            const optionsJSON = await optionsRes.json();
+
+            log("Options received. Triggering biometric scanner...");
+
+            // 2. Trigger Browser Biometric Prompt (Assertion)
+            const asseResponse = await startAuthentication(optionsJSON);
+            log("Fingerprint verified by device! Sending to server...");
+
+            // 3. Send response back to server for verification
+            // We'll create this endpoint next
+            const verifyRes = await fetch('http://localhost:3000/auth/login/biometric-verify', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${jwt}` 
+                },
+                body: JSON.stringify(asseResponse)
+            });
+
+            const verifyData = await verifyRes.json();
+            
+            if (verifyData.access_token) {
+                jwt = verifyData.access_token; // Refresh the JWT
+                log("SUCCESS: Biometric Login Verified! You are authenticated.");
+            } else {
+                log("FAILED: " + JSON.stringify(verifyData));
+            }
+        } catch (err) {
+            log("WebAuthn Auth Error: " + err.name + " - " + err.message);
+            console.error(err);
+        }
+    }
     </script>
 </body>
 </html>

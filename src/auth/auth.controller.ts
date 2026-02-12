@@ -36,4 +36,20 @@ export class AuthController {
   ) {
     return this.authService.verifyRegistrationResponse(userId, body);
   }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Get('login/biometric-options')
+  async getLoginOptions(@GetUser('id') userId: string) {
+    return this.authService.getAuthenticationOptions(userId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('login/biometric-verify')
+  async verifyBiometricLogin(
+    @GetUser('id') userId: string,
+    @Body() body: server.AuthenticationResponseJSON,
+  ) {
+    return this.authService.verifyAuthenticationResponse(userId, body);
+  }
 }

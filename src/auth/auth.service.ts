@@ -4,13 +4,18 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { generateRegistrationOptions } from '@simplewebauthn/server';
+import {
+  generateRegistrationOptions,
+  verifyAuthenticationResponse,
+} from '@simplewebauthn/server';
 import {
   verifyRegistrationResponse,
   RegistrationResponseJSON,
 } from '@simplewebauthn/server';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
+import { generateAuthenticationOptions } from '@simplewebauthn/server';
+import { AuthenticationResponseJSON } from '@simplewebauthn/server';
 
 @Injectable()
 export class AuthService {
@@ -140,5 +145,110 @@ export class AuthService {
     } else {
       throw new BadRequestException('Registration verification failed');
     }
+  }
+
+  async getAuthenticationOptions(userId: string) {
+    // 1. Fetch the user's authenticators from the DB
+    const userAuthenticators = await this.prisma.authenticator.findMany({
+      where: { userId },
+    });
+
+    if (userAuthenticators.length === 0) {
+      throw new BadRequestException(
+        'No biometric credentials registered for this user.',
+      );
+    }
+
+    // 2. Generate the login options
+    const options = await generateAuthenticationOptions({
+      allowCredentials: userAuthenticators.map((auth) => ({
+        id: auth.credentialID,
+        type: 'public-key',
+        // Optional: helps the browser know which transport to use (usb, ble, nfc, internal)
+      })),
+      userVerification: 'preferred',
+      rpID: 'localhost',
+    });
+
+    // 3. Save the challenge to the User record to verify later
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { currentChallenge: options.challenge },
+    });
+
+    return options;
+  }
+  async verifyAuthenticationResponse(
+    userId: string,
+    body: AuthenticationResponseJSON,
+  ) {
+    // 1. Fetch user and their authenticators
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { authenticators: true },
+    });
+
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+    const { currentChallenge = '' } = user ?? {};
+    if (!currentChallenge) {
+      throw new BadRequestException('Authentication challenge not found');
+    }
+
+    // 2. Find the specific authenticator the browser used
+    const authenticator = user.authenticators.find(
+      (auth) => auth.credentialID === body.id,
+    );
+
+    if (!authenticator) {
+      throw new BadRequestException('Authenticator not recognized');
+    }
+
+    let verification;
+    try {
+      // 3. Verify the signature against the stored Public Key
+      verification = await verifyAuthenticationResponse({
+        response: body,
+        expectedChallenge: currentChallenge,
+        expectedOrigin: 'http://localhost:5500',
+        expectedRPID: 'localhost',
+        credential: {
+          id: authenticator.credentialID,
+          publicKey: authenticator.publicKey, // This is why we saved it!
+          counter: authenticator.counter,
+        },
+      });
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      throw new BadRequestException(
+        'Biometric verification failed: ' + errorMessage,
+      );
+    }
+    if (verification.verified && verification.authenticationInfo) {
+      const { authenticationInfo } = verification;
+      const { newCounter } = authenticationInfo;
+
+      await this.prisma.$transaction([
+        this.prisma.authenticator.update({
+          where: { credentialID: authenticator.credentialID },
+          data: { counter: newCounter },
+        }),
+
+        // 5. Clear challenge and return a fresh JWT
+        this.prisma.user.update({
+          where: { id: userId },
+          data: { currentChallenge: null },
+        }),
+      ]);
+
+      // Reuse your existing JWT generation logic
+      return {
+        access_token: this.jwtService.sign({ email: user.email, sub: user.id }),
+      };
+    }
+
+    throw new BadRequestException('Biometric authentication failed');
   }
 }
