@@ -4,7 +4,6 @@ import { ApiOperation, ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { GetUser } from './decorators/get-user.decorator'; // You'll need this decorator
 import * as server from '@simplewebauthn/server';
-
 @ApiTags('Authentication')
 @Controller('auth')
 export class AuthController {
@@ -37,19 +36,21 @@ export class AuthController {
     return this.authService.verifyRegistrationResponse(userId, body);
   }
 
-  @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard)
-  @Get('login/biometric-options')
-  async getLoginOptions(@GetUser('id') userId: string) {
-    return this.authService.getAuthenticationOptions(userId);
+  @Post('login/biometric-options')
+  async getBiometricOptions(
+    @Body('identificationNumber') identificationNumber: string,
+  ) {
+    return this.authService.getAuthenticationOptions(identificationNumber);
   }
 
-  @UseGuards(JwtAuthGuard)
   @Post('login/biometric-verify')
-  async verifyBiometricLogin(
-    @GetUser('id') userId: string,
-    @Body() body: server.AuthenticationResponseJSON,
-  ) {
-    return this.authService.verifyAuthenticationResponse(userId, body);
+  async verifyBiometricLogin(@Body() body: any) {
+    const { identificationNumber, ...asseResponse } = body;
+
+    // Pass the Matric No instead of a JWT userId
+    return this.authService.verifyAuthenticationResponse(
+      identificationNumber,
+      asseResponse,
+    );
   }
 }

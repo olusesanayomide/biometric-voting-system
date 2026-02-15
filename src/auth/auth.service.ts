@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
@@ -100,6 +101,7 @@ export class AuthService {
 
     return options;
   }
+
   async verifyRegistrationResponse(
     userId: string,
     body: RegistrationResponseJSON,
@@ -147,24 +149,27 @@ export class AuthService {
     }
   }
 
-  async getAuthenticationOptions(userId: string) {
+  async getAuthenticationOptions(identificationNumber: string) {
     // 1. Fetch the user's authenticators from the DB
-    const userAuthenticators = await this.prisma.authenticator.findMany({
-      where: { userId },
+    const user = await this.prisma.user.findUnique({
+      where: { identificationNumber },
+      include: { authenticators: true },
     });
 
-    if (userAuthenticators.length === 0) {
+    if (!user) {
+      throw new NotFoundException('Voter ID not found in database.');
+    }
+    if (!user.authenticators || user.authenticators.length === 0) {
       throw new BadRequestException(
-        'No biometric credentials registered for this user.',
+        'No biometrics enrolled. Use PIN login to register your device.',
       );
     }
 
     // 2. Generate the login options
     const options = await generateAuthenticationOptions({
-      allowCredentials: userAuthenticators.map((auth) => ({
+      allowCredentials: user.authenticators.map((auth) => ({
         id: auth.credentialID,
         type: 'public-key',
-        // Optional: helps the browser know which transport to use (usb, ble, nfc, internal)
       })),
       userVerification: 'preferred',
       rpID: 'localhost',
@@ -172,19 +177,20 @@ export class AuthService {
 
     // 3. Save the challenge to the User record to verify later
     await this.prisma.user.update({
-      where: { id: userId },
+      where: { id: user.id },
       data: { currentChallenge: options.challenge },
     });
 
     return options;
   }
+
   async verifyAuthenticationResponse(
-    userId: string,
+    identificationNumber: string,
     body: AuthenticationResponseJSON,
   ) {
     // 1. Fetch user and their authenticators
     const user = await this.prisma.user.findUnique({
-      where: { id: userId },
+      where: { identificationNumber: identificationNumber },
       include: { authenticators: true },
     });
 
@@ -238,7 +244,7 @@ export class AuthService {
 
         // 5. Clear challenge and return a fresh JWT
         this.prisma.user.update({
-          where: { id: userId },
+          where: { identificationNumber },
           data: { currentChallenge: null },
         }),
       ]);

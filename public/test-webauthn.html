@@ -1,75 +1,219 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>WebAuthn Test</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Biometric Voting System | Authentication</title>
     <script src="https://unpkg.com/@simplewebauthn/browser/dist/bundle/index.umd.min.js"></script>
     <style>
-        body { font-family: sans-serif; padding: 20px; line-height: 1.6; }
-        .box { border: 1px solid #ccc; padding: 15px; margin-bottom: 10px; border-radius: 8px; }
-        input { padding: 8px; width: 250px; }
-        button { padding: 8px 15px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; }
-        pre { background: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --success: #10b981;
+            --bg: #f8fafc;
+            --text: #1e293b;
+            --card-bg: #ffffff;
+            --border: #e2e8f0;
+        }
+
+        body { 
+            font-family: 'Inter', system-ui, -apple-system, sans-serif; 
+            background-color: var(--bg);
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px 20px;
+            margin: 0;
+        }
+
+        .container { width: 100%; max-width: 500px; }
+
+        h1 { text-align: center; color: var(--text); margin-bottom: 30px; font-size: 1.5rem; }
+        h2 { font-size: 1.1rem; margin-top: 0; display: flex; align-items: center; gap: 8px; }
+
+        .box { 
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            padding: 24px; 
+            margin-bottom: 24px; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+        }
+
+        .input-group { margin-bottom: 16px; }
+        
+        input { 
+            display: block;
+            width: 100%; 
+            padding: 12px; 
+            margin-top: 8px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+
+        input:focus { outline: none; border-color: var(--primary); ring: 2px var(--primary); }
+
+        button { 
+            width: 100%;
+            padding: 12px; 
+            cursor: pointer; 
+            background: var(--primary); 
+            color: white; 
+            border: none; 
+            border-radius: 6px; 
+            font-weight: 600;
+            font-size: 14px;
+            transition: background 0.2s, opacity 0.2s;
+            margin-top: 10px;
+        }
+
+        button:hover:not(:disabled) { background: var(--primary-hover); }
+        button:disabled { opacity: 0.5; cursor: not-allowed; background: #94a3b8; }
+
+        #regBtn { background: var(--success); }
+
+        .status-text { font-size: 13px; color: #64748b; margin-top: 12px; line-height: 1.4; }
+        
+        hr { border: 0; border-top: 1px solid var(--border); margin: 30px 0; }
+
+        h3 { font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; }
+        
+        pre { 
+            background: #1e293b; 
+            color: #38bdf8;
+            padding: 15px; 
+            border-radius: 8px; 
+            font-size: 13px;
+            overflow-x: auto;
+            max-height: 200px;
+            border: 1px solid #334155;
+        }
+
+        .badge {
+            background: #dcfce7;
+            color: #166534;
+            padding: 2px 8px;
+            border-radius: 99px;
+            font-size: 11px;
+            font-weight: 700;
+        }
     </style>
 </head>
 <body>
-    <h2>1. Login with PIN (Get JWT)</h2>
+
+<div class="container">
+    <h1>Voter Identity Portal</h1>
+
     <div class="box">
-        <input type="text" id="idNumber" placeholder="Identification Number (Matric No)">
-        <input type="password" id="pin" placeholder="PIN">
-        <button onclick="login()">Login</button>
+        <h2>1. Enrollment <span class="badge">Setup</span></h2>
+        <p class="status-text">Verification required for first-time biometric setup.</p>
+        
+        <div class="input-group">
+            <input type="text" id="regIdNumber" placeholder="Matric Number">
+            <input type="password" id="regPin" placeholder="Security PIN">
+        </div>
+        
+        <button onclick="loginForRegistration()">Verify Identity</button>
+        <button id="regBtn" onclick="registerBiometric()" disabled>Enroll Biometrics</button>
+        <p id="status" class="status-text">Please verify identity to enable enrollment.</p>
     </div>
 
-    <h2>2. Register Biometric</h2>
     <div class="box">
-        <button id="regBtn" onclick="registerBiometric()" disabled>Start Registration</button>
-        <p id="status">Login first to enable registration</p>
+        <h2>2. Passwordless Login <span class="badge" style="background:#e0e7ff; color:#3730a3">Secure</span></h2>
+        <p class="status-text">Enter your ID to authenticate using your device sensor.</p>
+        
+        <input type="text" id="loginIdNumber" placeholder="Matric Number">
+        <button id="bioLoginBtn" onclick="loginBiometric()">Login with Fingerprint</button>
+        <p id="bioStatus" class="status-text">No PIN required for registered devices.</p>
     </div>
 
-    <hr>
-<h2>3. Login with Biometric (Passwordless)</h2>
-<div class="box">
-    <button id="bioLoginBtn" onclick="loginBiometric()" disabled>Login with Fingerprint</button>
-    <p id="bioStatus">Login with PIN first once to enable this button (for testing)</p>
+    <h3>Activity Logs</h3>
+    <pre id="log">System ready...</pre>
 </div>
-
-    <h3>Output Log:</h3>
-    <pre id="log">Waiting for action...</pre>
-
+    <script src="https://unpkg.com/@simplewebauthn/browser/dist/bundle/index.umd.min.js"></script>
     <script>
         const { startRegistration, startAuthentication } = SimpleWebAuthnBrowser;
         let jwt = '';
 
         function log(msg) {
-            document.getElementById('log').innerText = typeof msg === 'object' ? JSON.stringify(msg, null, 2) : msg;
+            const logElem = document.getElementById('log');
+            logElem.innerText = typeof msg === 'object' ? JSON.stringify(msg, null, 2) : msg;
         }
 
-        async function login() {
-            const id = document.getElementById('idNumber').value;
-            const pin = document.getElementById('pin').value;
-            document.getElementById('bioLoginBtn').disabled = false
-
+        // Modified Login for Onboarding/Registration
+        async function loginForRegistration() {
+            const id = document.getElementById('regIdNumber').value;
+            const pin = document.getElementById('regPin').value;
             try {
                 const response = await fetch('http://localhost:3000/auth/login-pin', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ identificationNumber: id, pin })
                 });
-
                 const data = await response.json();
                 if (data.access_token) {
                     jwt = data.access_token;
                     document.getElementById('regBtn').disabled = false;
-                    document.getElementById('status').innerText = "Logged in! You can now register biometrics.";
-                    log("Login Success! Token received.");
+                    log("Identity Verified. You can now enroll your biometrics.");
                 } else {
                     log("Login failed: " + JSON.stringify(data));
                 }
-            } catch (err) {
-                log("Error: " + err.message);
-            }
+            } catch (err) { log("Error: " + err.message); }
         }
 
-       async function registerBiometric() {
+        // THE PASSWORDLESS LOGIN FUNCTION
+        async function loginBiometric() {
+            const id = document.getElementById('loginIdNumber').value;
+            if (!id) return log("Please enter your Matric Number first.");
+
+            try {
+                log("Fetching biometric challenge for: " + id);
+
+                // 1. Request options using ONLY the Matric No (Public Route)
+                const optionsRes = await fetch('http://localhost:3000/auth/login/biometric-options', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ identificationNumber: id })
+                });
+
+                if (!optionsRes.ok) throw new Error("User not found or no biometrics registered.");
+                const optionsJSON = await optionsRes.json();
+
+                log("Challenge received. Please scan your fingerprint...");
+
+                // 2. Trigger Device Biometric Prompt
+                const asseResponse = await startAuthentication(optionsJSON);
+                log("Device verified! Finalizing with server...");
+
+                // 3. Verify the hardware signature on the backend
+                const verifyRes = await fetch('http://localhost:3000/auth/login/biometric-verify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        identificationNumber: id, // Identifying who is responding
+                        ...asseResponse 
+                    })
+                });
+
+                const verifyData = await verifyRes.json();
+                
+                if (verifyData.access_token) {
+                    jwt = verifyData.access_token; 
+                    log("SUCCESS: Passwordless Login Verified! Access Token Received.");
+                } else {
+                    log("Server Verification Failed: " + JSON.stringify(verifyData));
+                }
+            } catch (err) {
+                log("Auth Error: " + err.message);
+            }
+
+            
+        }
+ async function registerBiometric() {
     try {
         log("Fetching registration options...");
         
@@ -114,50 +258,7 @@
         log("WebAuthn Error: " + err.name + " - " + err.message);
         console.error(err);
     }
-    
 }
-async function loginBiometric() {
-        try {
-            log("Fetching authentication options...");
-
-            // 1. Get options from backend (Assertion Challenge)
-            const optionsRes = await fetch('http://localhost:3000/auth/login/biometric-options', {
-                headers: { 'Authorization': `Bearer ${jwt}` }
-            });
-
-            if (!optionsRes.ok) throw new Error("Could not fetch login options");
-            const optionsJSON = await optionsRes.json();
-
-            log("Options received. Triggering biometric scanner...");
-
-            // 2. Trigger Browser Biometric Prompt (Assertion)
-            const asseResponse = await startAuthentication(optionsJSON);
-            log("Fingerprint verified by device! Sending to server...");
-
-            // 3. Send response back to server for verification
-            // We'll create this endpoint next
-            const verifyRes = await fetch('http://localhost:3000/auth/login/biometric-verify', {
-                method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${jwt}` 
-                },
-                body: JSON.stringify(asseResponse)
-            });
-
-            const verifyData = await verifyRes.json();
-            
-            if (verifyData.access_token) {
-                jwt = verifyData.access_token; // Refresh the JWT
-                log("SUCCESS: Biometric Login Verified! You are authenticated.");
-            } else {
-                log("FAILED: " + JSON.stringify(verifyData));
-            }
-        } catch (err) {
-            log("WebAuthn Auth Error: " + err.name + " - " + err.message);
-            console.error(err);
-        }
-    }
+        // ... (Keep your existing registerBiometric function here) ...
     </script>
 </body>
-</html>

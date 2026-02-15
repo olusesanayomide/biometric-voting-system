@@ -109,4 +109,5 @@ model Ballot {
   candidateId String
   election    Election @relation(fields: [electionId], references: [id])
   candidate   Candidate @relation(fields: [candidateId], references: [id])
+  createdAt DateTime @default(now())
 }
