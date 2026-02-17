@@ -1,4 +1,4 @@
-import { UserType } from 'generated/prisma';
+import { UserType } from '@prisma/client';
 import {
   ArrayNotEmpty,
   IsArray,
@@ -9,7 +9,7 @@ import {
 
 export class CreateElectionDto {
   @IsString()
-  @MinLength(3, { message: 'Electio Title is too short' })
+  @MinLength(3, { message: 'Election Title is too short' })
   title: string;
 
   @IsArray()

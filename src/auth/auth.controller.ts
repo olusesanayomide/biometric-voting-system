@@ -4,6 +4,7 @@ import { ApiOperation, ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { GetUser } from './decorators/get-user.decorator'; // You'll need this decorator
 import * as server from '@simplewebauthn/server';
+import { BiometricVerifyDto } from './dto/bio-verify.dto';
 @ApiTags('Authentication')
 @Controller('auth')
 export class AuthController {
@@ -44,13 +45,11 @@ export class AuthController {
   }
 
   @Post('login/biometric-verify')
-  async verifyBiometricLogin(@Body() body: any) {
-    const { identificationNumber, ...asseResponse } = body;
-
+  async verifyBiometricLogin(@Body() body: BiometricVerifyDto) {
     // Pass the Matric No instead of a JWT userId
     return this.authService.verifyAuthenticationResponse(
-      identificationNumber,
-      asseResponse,
+      body.identificationNumber,
+      body.biometricData,
     );
   }
 }

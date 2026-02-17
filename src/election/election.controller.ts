@@ -3,10 +3,11 @@ import {
   Post,
   Get,
   Body,
-  UseGuards,
+  // UseGuards,
   ForbiddenException,
   Patch,
   Param,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -16,9 +17,9 @@ import {
 } from '@nestjs/swagger';
 import { ElectionService } from './election.service';
 import { CreateElectionDto } from './dto/create-election.dto';
-import { SubmitVoteDto } from './dto/submit-vote.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { GetUser } from '../auth/decorators/get-user.decorator';
+import { SubmitVoteDto } from './dto/submit-vote.dto';
 
 @ApiTags('Elections') // Groups these in the Swagger UI
 @ApiBearerAuth() // Shows the "Lock" icon for JWT in Swagger
@@ -59,7 +60,7 @@ export class ElectionController {
     description: 'User has already voted or is ineligible.',
   })
   async vote(@GetUser('id') userId: string, @Body() body: SubmitVoteDto) {
-    return this.electionService.submitVote(userId, body.electionId, body.selections);
+    return this.electionService.submitVote(userId, body);
   }
 
   @Patch(':id/start')

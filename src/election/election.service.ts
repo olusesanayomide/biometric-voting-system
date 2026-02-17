@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -6,6 +7,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { UserType } from '../../generated/prisma/index';
 import { ElectionStatus } from '@prisma/client';
+import { SubmitVoteDto } from './dto/submit-vote.dto';
 
 @Injectable()
 export class ElectionService {
@@ -86,5 +88,52 @@ export class ElectionService {
       throw new ForbiddenException('You have already voted in this election');
     }
     return election;
+  }
+  async submitVote(userId: string, dto: SubmitVoteDto) {
+    const { electionId, selections } = dto;
+
+    // Prisma Transaction applied to esnsure all or nothing
+    return this.prismaservice.$transaction(async (tx) => {
+      // Has User Already voted
+      const existingRecord = await this.prismaservice.voterRecord.findUnique({
+        where: { userId_electionId: { userId, electionId } },
+      });
+      if (existingRecord) {
+        throw new ForbiddenException('User Has Already voted ');
+      }
+
+      // Validate the election status
+      const election = await tx.election.findUnique({
+        where: { id: electionId },
+      });
+      if (!election || election.status !== 'ONGOING') {
+        throw new BadRequestException('No ongoing election exists ');
+      }
+      // Regsiter Voted Record
+      await tx.voterRecord.create({
+        data: {
+          userId,
+          electionId,
+        },
+      });
+
+      // Record Anonymous Ballots
+      // Map the selections to include the electioID for the ballot table
+      const ballotData = selections.map((s) => ({
+        electionId,
+        positionId: s.positionId,
+        candidateId: s.candidateId,
+      }));
+
+      await tx.ballot.createMany({
+        data: ballotData,
+      });
+
+      return {
+        success: true,
+        message: 'your vote has been cast anonymously and recorded ',
+        timestamp: new Date(),
+      };
+    });
   }
 }
