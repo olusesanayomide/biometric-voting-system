@@ -20,6 +20,9 @@ import { AuthenticationResponseJSON } from '@simplewebauthn/server';
 
 @Injectable()
 export class AuthService {
+  loginByIdentificationNumber(id: string) {
+    throw new Error('Method not implemented.');
+  }
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
@@ -256,5 +259,25 @@ export class AuthService {
     }
 
     throw new BadRequestException('Biometric authentication failed');
+  }
+
+  // Test Login Bypass
+  async loginByIdentificationNumberTest(id: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { identificationNumber: id },
+    });
+    if (!user) {
+      throw new NotFoundException('User Not Found ');
+    }
+    const payload = {
+      sub: user.id,
+      identificationNumber: user.identificationNumber,
+      role: user.userType,
+    };
+
+    return {
+      access_token: this.jwtService.sign(payload),
+      user: { id: user.id, type: user.userType },
+    };
   }
 }

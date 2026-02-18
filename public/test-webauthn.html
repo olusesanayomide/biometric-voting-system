@@ -4,137 +4,253 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Biometric Voting System | Authentication</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/@simplewebauthn/browser/dist/bundle/index.umd.min.js"></script>
     <style>
         :root {
-            --primary: #2563eb;
-            --primary-hover: #1d4ed8;
-            --success: #10b981;
-            --bg: #f8fafc;
-            --text: #1e293b;
-            --card-bg: #ffffff;
-            --border: #e2e8f0;
+            --ink: #112235;
+            --ink-soft: #516174;
+            --panel: #ffffff;
+            --line: #d5dfeb;
+            --blue-600: #0466c8;
+            --blue-700: #0353a4;
+            --green-600: #2a9d8f;
+            --green-700: #1f7f74;
+            --surface: #f1f6fb;
+            --log-bg: #0b1928;
+            --log-line: #25415f;
+            --log-text: #9cd3ff;
         }
 
-        body { 
-            font-family: 'Inter', system-ui, -apple-system, sans-serif; 
-            background-color: var(--bg);
-            color: var(--text);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 40px 20px;
-            margin: 0;
-        }
-
-        .container { width: 100%; max-width: 500px; }
-
-        h1 { text-align: center; color: var(--text); margin-bottom: 30px; font-size: 1.5rem; }
-        h2 { font-size: 1.1rem; margin-top: 0; display: flex; align-items: center; gap: 8px; }
-
-        .box { 
-            background: var(--card-bg);
-            border: 1px solid var(--border);
-            padding: 24px; 
-            margin-bottom: 24px; 
-            border-radius: 12px; 
-            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-        }
-
-        .input-group { margin-bottom: 16px; }
-        
-        input { 
-            display: block;
-            width: 100%; 
-            padding: 12px; 
-            margin-top: 8px;
-            border: 1px solid var(--border);
-            border-radius: 6px;
+        * {
             box-sizing: border-box;
-            font-size: 14px;
-            transition: border-color 0.2s;
         }
 
-        input:focus { outline: none; border-color: var(--primary); ring: 2px var(--primary); }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            padding: 24px 16px 36px;
+            font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+            color: var(--ink);
+            background:
+                radial-gradient(1200px 450px at 15% -10%, #d8efff 0%, transparent 60%),
+                radial-gradient(900px 400px at 90% 0%, #d9f4ee 0%, transparent 60%),
+                linear-gradient(175deg, #f6fbff 0%, #eef4fa 100%);
+            display: flex;
+            justify-content: center;
+        }
 
-        button { 
+        .container {
+            width: min(760px, 100%);
+        }
+
+        .shell {
+            background: color-mix(in srgb, var(--panel) 92%, #ecf4fc 8%);
+            border: 1px solid var(--line);
+            border-radius: 22px;
+            padding: 28px;
+            box-shadow:
+                0 20px 45px -24px rgba(4, 31, 62, 0.35),
+                0 10px 24px -18px rgba(17, 34, 53, 0.5);
+        }
+
+        h1 {
+            margin: 0;
+            font-family: "Space Grotesk", "IBM Plex Sans", sans-serif;
+            font-size: clamp(1.4rem, 1.6vw + 1rem, 2rem);
+            letter-spacing: -0.03em;
+            text-align: center;
+        }
+
+        .subtitle {
+            margin: 10px 0 26px;
+            text-align: center;
+            color: var(--ink-soft);
+            font-size: 0.95rem;
+        }
+
+        .box {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 18px;
+        }
+
+        .box h2 {
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            font-size: 1.06rem;
+        }
+
+        .status-text {
+            margin: 12px 0 0;
+            font-size: 0.88rem;
+            line-height: 1.45;
+            color: var(--ink-soft);
+        }
+
+        .input-group {
+            margin-top: 14px;
+            display: grid;
+            gap: 10px;
+        }
+
+        input {
             width: 100%;
-            padding: 12px; 
-            cursor: pointer; 
-            background: var(--primary); 
-            color: white; 
-            border: none; 
-            border-radius: 6px; 
-            font-weight: 600;
-            font-size: 14px;
-            transition: background 0.2s, opacity 0.2s;
-            margin-top: 10px;
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            padding: 12px 14px;
+            font-size: 0.92rem;
+            color: var(--ink);
+            background: var(--surface);
+            transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
         }
 
-        button:hover:not(:disabled) { background: var(--primary-hover); }
-        button:disabled { opacity: 0.5; cursor: not-allowed; background: #94a3b8; }
+        input::placeholder {
+            color: #76879b;
+        }
 
-        #regBtn { background: var(--success); }
+        input:focus {
+            outline: none;
+            border-color: var(--blue-600);
+            box-shadow: 0 0 0 3px rgba(4, 102, 200, 0.16);
+            background: #ffffff;
+        }
 
-        .status-text { font-size: 13px; color: #64748b; margin-top: 12px; line-height: 1.4; }
-        
-        hr { border: 0; border-top: 1px solid var(--border); margin: 30px 0; }
+        button {
+            width: 100%;
+            border: none;
+            border-radius: 10px;
+            margin-top: 10px;
+            padding: 12px 14px;
+            font-size: 0.92rem;
+            font-weight: 600;
+            letter-spacing: 0.01em;
+            color: #ffffff;
+            cursor: pointer;
+            background: linear-gradient(180deg, var(--blue-600), var(--blue-700));
+            transition: transform 0.12s ease, filter 0.18s ease, opacity 0.18s ease;
+        }
 
-        h3 { font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; }
-        
-        pre { 
-            background: #1e293b; 
-            color: #38bdf8;
-            padding: 15px; 
-            border-radius: 8px; 
-            font-size: 13px;
+        button:hover:not(:disabled) {
+            filter: brightness(1.06);
+            transform: translateY(-1px);
+        }
+
+        button:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            opacity: 0.56;
+            cursor: not-allowed;
+            transform: none;
+            filter: grayscale(0.2);
+        }
+
+        #regBtn {
+            background: linear-gradient(180deg, var(--green-600), var(--green-700));
+        }
+
+        h3 {
+            margin: 24px 0 10px;
+            font-size: 0.8rem;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: #566577;
+        }
+
+        pre {
+            margin: 0;
+            border: 1px solid var(--log-line);
+            border-radius: 12px;
+            background: var(--log-bg);
+            color: var(--log-text);
+            padding: 14px 16px;
+            font-size: 0.82rem;
+            line-height: 1.45;
             overflow-x: auto;
-            max-height: 200px;
-            border: 1px solid #334155;
+            min-height: 86px;
+            max-height: 210px;
         }
 
         .badge {
-            background: #dcfce7;
-            color: #166534;
-            padding: 2px 8px;
-            border-radius: 99px;
-            font-size: 11px;
+            display: inline-flex;
+            align-items: center;
+            border-radius: 999px;
+            font-size: 0.68rem;
+            line-height: 1;
             font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            padding: 6px 9px;
+            background: #d8f4ef;
+            color: #0f5e55;
+        }
+
+        .badge.secure {
+            background: #d8e8fa;
+            color: #0c4d8a;
+        }
+
+        @media (max-width: 520px) {
+            body {
+                padding: 14px 12px 20px;
+            }
+
+            .shell {
+                padding: 16px;
+                border-radius: 16px;
+            }
+
+            .box {
+                padding: 16px;
+            }
         }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>Voter Identity Portal</h1>
+    <div class="shell">
+        <h1>Voter Identity Portal</h1>
+        <p class="subtitle">Secure biometric enrollment and passwordless verification for registered voters.</p>
 
-    <div class="box">
-        <h2>1. Enrollment <span class="badge">Setup</span></h2>
-        <p class="status-text">Verification required for first-time biometric setup.</p>
-        
-        <div class="input-group">
-            <input type="text" id="regIdNumber" placeholder="Matric Number">
-            <input type="password" id="regPin" placeholder="Security PIN">
+        <div class="box">
+            <h2>1. Enrollment <span class="badge">Setup</span></h2>
+            <p class="status-text">Verification required for first-time biometric setup.</p>
+
+            <div class="input-group">
+                <input type="text" id="regIdNumber" placeholder="Matric Number">
+                <input type="password" id="regPin" placeholder="Security PIN">
+            </div>
+
+            <button onclick="loginForRegistration()">Verify Identity</button>
+            <button id="regBtn" onclick="registerBiometric()" disabled>Enroll Biometrics</button>
+            <p id="status" class="status-text">Please verify identity to enable enrollment.</p>
         </div>
-        
-        <button onclick="loginForRegistration()">Verify Identity</button>
-        <button id="regBtn" onclick="registerBiometric()" disabled>Enroll Biometrics</button>
-        <p id="status" class="status-text">Please verify identity to enable enrollment.</p>
-    </div>
 
-    <div class="box">
-        <h2>2. Passwordless Login <span class="badge" style="background:#e0e7ff; color:#3730a3">Secure</span></h2>
-        <p class="status-text">Enter your ID to authenticate using your device sensor.</p>
-        
-        <input type="text" id="loginIdNumber" placeholder="Matric Number">
-        <button id="bioLoginBtn" onclick="loginBiometric()">Login with Fingerprint</button>
-        <p id="bioStatus" class="status-text">No PIN required for registered devices.</p>
-    </div>
+        <div class="box">
+            <h2>2. Passwordless Login <span class="badge secure">Secure</span></h2>
+            <p class="status-text">Enter your ID to authenticate using your device sensor.</p>
 
-    <h3>Activity Logs</h3>
-    <pre id="log">System ready...</pre>
+            <div class="input-group">
+                <input type="text" id="loginIdNumber" placeholder="Matric Number">
+            </div>
+            <button id="bioLoginBtn" onclick="loginBiometric()">Login with Fingerprint</button>
+            <p id="bioStatus" class="status-text">No PIN required for registered devices.</p>
+        </div>
+
+        <h3>Activity Logs</h3>
+        <pre id="log">System ready...</pre>
+    </div>
 </div>
-    <script src="https://unpkg.com/@simplewebauthn/browser/dist/bundle/index.umd.min.js"></script>
     <script>
         const { startRegistration, startAuthentication } = SimpleWebAuthnBrowser;
         let jwt = '';
@@ -195,7 +311,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
                         identificationNumber: id, // Identifying who is responding
-                        ...asseResponse 
+                        biometricData: asseResponse 
                     })
                 });
 

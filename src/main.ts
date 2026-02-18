@@ -22,8 +22,19 @@ async function bootstrap() {
     .setTitle('Biometric Voting System API')
     .setDescription('API for managing biometric voting system')
     .setVersion('1.0')
-    .addTag('biometric-voting')
+    .addBearerAuth(
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        name: 'JWT',
+        description: 'Enter JWT token',
+        in: 'header',
+      },
+      'access-token',
+    )
     .build();
+
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
 

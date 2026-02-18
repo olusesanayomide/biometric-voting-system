@@ -17,13 +17,14 @@ import {
 } from '@nestjs/swagger';
 import { ElectionService } from './election.service';
 import { CreateElectionDto } from './dto/create-election.dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+// import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { GetUser } from '../auth/decorators/get-user.decorator';
 import { SubmitVoteDto } from './dto/submit-vote.dto';
+import { MockAuthGuard } from 'src/auth/guards/Mock-auth.guard';
 
 @ApiTags('Elections') // Groups these in the Swagger UI
-@ApiBearerAuth() // Shows the "Lock" icon for JWT in Swagger
-@UseGuards(JwtAuthGuard)
+@ApiBearerAuth('access-token') // Shows the "Lock" icon for JWT in Swagger
+@UseGuards(MockAuthGuard)
 @Controller('elections')
 export class ElectionController {
   constructor(private electionService: ElectionService) {}
