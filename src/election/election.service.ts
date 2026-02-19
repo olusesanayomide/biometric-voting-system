@@ -136,4 +136,51 @@ export class ElectionService {
       };
     });
   }
+
+  // Election state managment
+  async trasntitonStatus(electionid: string, nextstatus: ElectionStatus) {
+    // 1. Checl for Ongoin election
+    const election = await this.prismaservice.election.findUnique({
+      where: { id: electionid },
+    });
+    if (!election) {
+      throw new NotFoundException('election not found ');
+    }
+    const currentstatus = election.status;
+
+    // 2. State mangement Rules
+    // Rule1 Cannot modify completed elections
+    if (currentstatus === ElectionStatus.COMPLETED) {
+      throw new BadRequestException(
+        'Election has been completed and cannot be changed.',
+      );
+    }
+    // Rule 2 Cannot pause unless it currently on going
+    if (
+      nextstatus === ElectionStatus.PAUSED &&
+      currentstatus !== ElectionStatus.ONGOING
+    ) {
+      throw new BadRequestException('Only Ongoin elections cand be paused  ');
+    }
+
+    // Rule 3cannot start of it is already on going
+    if (
+      nextstatus === ElectionStatus.ONGOING &&
+      currentstatus === ElectionStatus.ONGOING
+    ) {
+      return election;
+    }
+
+    return this.prismaservice.election.update({
+      where: { id: electionid },
+      data: {
+        status: nextstatus,
+        // Track when the election started or ended  for the report
+        ...(nextstatus === ElectionStatus.ONGOING && { startDate: new Date() }),
+        ...(nextstatus === ElectionStatus.COMPLETED && {
+          endDate: new Date(),
+        }),
+      },
+    });
+  }
 }

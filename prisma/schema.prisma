@@ -26,6 +26,7 @@ enum ElectionStatus {
   DRAFT
   ONGOING
   COMPLETED
+  PAUSED
 }
 
 model User {
@@ -67,6 +68,7 @@ model Election {
   positions     Position[]
   voterRecords  VoterRecord[]
   ballots       Ballot[]
+  candidates Candidate[]
   createdAt DateTime @default(now())
   updatedAt  DateTime @updatedAt
 }
@@ -84,6 +86,9 @@ model Candidate {
   name       String
   bio        String?
   imageUrl   String?
+  manifesto  String?
+  electionId  String
+  election    Election @relation(fields: [electionId], references: [id])
   positionId String
   position   Position @relation(fields: [positionId], references: [id])
   ballots    Ballot[]
