@@ -15,7 +15,7 @@ import { GetUser } from '../auth/decorators/get-user.decorator';
 import { SubmitVoteDto } from './dto/submit-vote.dto';
 import { MockAuthGuard } from 'src/auth/guards/Mock-auth.guard';
 import { Roles } from 'src/auth/decorators/roles.decorator';
-import { ElectionStatus } from 'generated/prisma';
+import { ElectionStatus } from '@prisma/client';
 
 @ApiTags('Elections')
 @ApiBearerAuth('access-token')

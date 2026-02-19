@@ -72,6 +72,11 @@ export class AdminService {
     const election = await this.prisma.election.findUnique({
       where: { id: candidate.electionId },
     });
+    if (!election) {
+      throw new NotFoundException(
+        `Election with ID ${candidate.electionId} not found.`,
+      );
+    }
 
     if (election.status === 'ONGOING') {
       throw new BadRequestException(

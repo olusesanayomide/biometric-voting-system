@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { UserType } from '../../generated/prisma/index';
+import { UserType } from '@prisma/client';
 import { ElectionStatus } from '@prisma/client';
 import { SubmitVoteDto } from './dto/submit-vote.dto';
 
@@ -33,12 +33,14 @@ export class ElectionService {
 
   // Admin add candidate to position
   async addCandidateToPosition(
+    electionId: string,
     positionId: string,
     data: { name: string; bio?: string; imageUrl: string },
   ) {
     return this.prismaservice.candidate.create({
       data: {
         ...data,
+        electionId,
         positionId,
       },
     });
