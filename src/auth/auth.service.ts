@@ -13,6 +13,7 @@ import {
   verifyRegistrationResponse,
   RegistrationResponseJSON,
 } from '@simplewebauthn/server';
+import type { VerifiedAuthenticationResponse } from '@simplewebauthn/server';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { generateAuthenticationOptions } from '@simplewebauthn/server';
@@ -20,9 +21,6 @@ import { AuthenticationResponseJSON } from '@simplewebauthn/server';
 
 @Injectable()
 export class AuthService {
-  loginByIdentificationNumber(id: string) {
-    throw new Error('Method not implemented.');
-  }
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
@@ -57,8 +55,11 @@ export class AuthService {
     };
     console.log('--- JWT DEBUG ---');
     console.log('JWT Service defined:', !!this.jwtService);
-    // This will attempt to read the internal config of the service
-    console.log('JWT Secret Check:', (this.jwtService as any).options?.secret);
+    // Keep debug output without reaching into private/unsafe internals.
+    console.log(
+      'JWT Secret Check:',
+      process.env.JWT_SECRET ? '[set]' : '[unset]',
+    );
     // 5. Sign and return
     return {
       access_token: this.jwtService.sign(payload),
@@ -214,7 +215,7 @@ export class AuthService {
       throw new BadRequestException('Authenticator not recognized');
     }
 
-    let verification;
+    let verification: VerifiedAuthenticationResponse;
     try {
       // 3. Verify the signature against the stored Public Key
       verification = await verifyAuthenticationResponse({
@@ -279,5 +280,23 @@ export class AuthService {
       access_token: this.jwtService.sign(payload),
       user: { id: user.id, type: user.userType },
     };
+  }
+
+  // src/admin/admin.service.ts
+
+  async preRegisterVoters(
+    voters: { idNum: string; email: string; name: string }[],
+  ) {
+    // Use createMany for high-performance batch insertion
+    return this.prisma.user.createMany({
+      data: voters.map((v) => ({
+        identificationNumber: v.idNum,
+        email: v.email,
+        name: v.name,
+        userType: 'STUDENT', // Or logic to determine Staff/Student
+        role: 'VOTER',
+      })),
+      skipDuplicates: true, // Prevents errors if some users already exist
+    });
   }
 }

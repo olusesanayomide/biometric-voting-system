@@ -36,16 +36,13 @@ model User {
   name                 String
   userType             UserType
   role                 Role            @default(VOTER)
-  
   // Biometrics
   authenticators       Authenticator[]
   currentChallenge      String?
-  secretPin            String?         // Hashed PIN
-
+  secretPin            String?         
   //otp
   otpCode              String?
   otpExpiresAt         DateTime?
-  
   voterRecords         VoterRecord[]
   createdAt            DateTime        @default(now())
   updatedAt            DateTime        @updatedAt

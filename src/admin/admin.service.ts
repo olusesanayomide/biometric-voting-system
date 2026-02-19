@@ -5,6 +5,8 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateCandidateDto } from './dto/create-candidate.dto';
+import { VoterImportItem } from './dto/import-voter.dto';
+import { Role, UserType } from '@prisma/client';
 
 @Injectable()
 export class AdminService {
@@ -86,6 +88,44 @@ export class AdminService {
     // 3. Safe to delete
     return this.prisma.candidate.delete({
       where: { id },
+    });
+  }
+
+  async preRegisterVoters(voters: VoterImportItem[]) {
+    // 1. Transform DTO items to Prisma User format
+    const userData = voters.map((v) => ({
+      identificationNumber: v.idNum.toUpperCase().trim(),
+      email: v.email.toLowerCase().trim(),
+      name: v.name,
+      userType: 'STUDENT' as UserType, // Casting to your enum
+      role: 'VOTER' as Role,
+    }));
+
+    // 2. High-performance batch insert
+    const result = await this.prisma.user.createMany({
+      data: userData,
+      skipDuplicates: true,
+    });
+
+    return {
+      message: 'Import completed successfully',
+      count: result.count,
+    };
+  }
+
+  async listAllVoters() {
+    return this.prisma.user.findMany({
+      where: { role: 'VOTER' },
+      select: {
+        id: true,
+        identificationNumber: true,
+        name: true,
+        email: true,
+        // We check if they are onboarded by checking if they have an authenticator
+        _count: {
+          select: { authenticators: true },
+        },
+      },
     });
   }
 }
