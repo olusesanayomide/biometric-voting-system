@@ -7,7 +7,12 @@ import {
   Param,
   UseGuards,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiResponse,
+} from '@nestjs/swagger';
 import { ElectionService } from './election.service';
 import { CreateElectionDto } from './dto/create-election.dto';
 // import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -15,7 +20,8 @@ import { GetUser } from '../auth/decorators/get-user.decorator';
 import { SubmitVoteDto } from './dto/submit-vote.dto';
 import { MockAuthGuard } from 'src/auth/guards/Mock-auth.guard';
 import { Roles } from 'src/auth/decorators/roles.decorator';
-import { ElectionStatus } from '@prisma/client';
+import { ElectionCreatedResponseDto } from './dto/election.-response.dto';
+import { UpdateElectionStatusDto } from './dto/update-election-status.dto';
 
 @ApiTags('Elections')
 @ApiBearerAuth('access-token')
@@ -24,15 +30,31 @@ import { ElectionStatus } from '@prisma/client';
 export class ElectionController {
   constructor(private electionService: ElectionService) {}
 
-  @Post('create')
-  @Roles('ADMIN') // <--- High Leverage: No more manual if checks!
+  @Post()
+  @Roles('ADMIN')
   @ApiOperation({ summary: 'Admin: Create a new election with positions' })
+  @ApiResponse({
+    status: 201,
+    description: 'Election successfully created in DRAFT state.',
+    type: ElectionCreatedResponseDto,
+  })
   async create(@Body() body: CreateElectionDto) {
+    // Your service returns the Prisma promise, which NestJS resolves automatically
     return this.electionService.createElections(body);
   }
 
   @Get('active-ballot')
-  @ApiOperation({ summary: 'Voter: Fetch the ongoing election' })
+  @Roles('ADMIN')
+  @ApiOperation({
+    summary: 'Voter: Fetch the ongoing election and candidates',
+    description:
+      'Returns the current active election including all positions and eligible candidates for the logged-in voter.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'The full ballot structure',
+    // type: ElectionResponseDto // If you have one, use it here!
+  })
   async getBallot(@GetUser('id') userId: string) {
     return this.electionService.getActiveBallot(userId);
   }
@@ -44,14 +66,15 @@ export class ElectionController {
     return this.electionService.submitVote(userId, body);
   }
 
-  @Patch(':id/status') // Changed from /start to /status for lifecycle flexibility
+  @Patch(':id/status')
   @Roles('ADMIN')
   @ApiOperation({ summary: 'Admin: Change election status' })
+  @ApiResponse({ status: 200, description: 'Status updated successfully' })
   async updateStatus(
     @Param('id') id: string,
-    @Body('status') status: ElectionStatus,
+    @Body() body: UpdateElectionStatusDto, // This makes the box appear in Swagger
   ) {
-    // This calls the state-machine logic we discussed
-    return this.electionService.trasntitonStatus(id, status);
+    // Pass body.status to your service
+    return this.electionService.trasntitonStatus(id, body.status);
   }
 }

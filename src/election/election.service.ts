@@ -67,7 +67,11 @@ export class ElectionService {
     const election = await this.prismaservice.election.findFirst({
       where: {
         status: 'ONGOING',
-        eligibleTypes: { has: user.userType },
+        // If user is ADMIN, they see ALL ongoing elections.
+        // If not, they only see ones matching their type.
+        ...(user.role !== 'ADMIN' && {
+          eligibleTypes: { has: user.userType },
+        }),
       },
       include: {
         positions: {
@@ -81,16 +85,19 @@ export class ElectionService {
       );
     }
     // check if the user has already voted in this election
-    const alreadyVoted = await this.prismaservice.voterRecord.findUnique({
-      where: {
-        userId_electionId: { userId: userid, electionId: election.id },
-      },
-    });
-    if (alreadyVoted) {
-      throw new ForbiddenException('You have already voted in this election');
+    if (user.role !== 'ADMIN') {
+      const alreadyVoted = await this.prismaservice.voterRecord.findUnique({
+        where: {
+          userId_electionId: { userId: userid, electionId: election.id },
+        },
+      });
+      if (alreadyVoted) {
+        throw new ForbiddenException('You have already voted in this election');
+      }
     }
     return election;
   }
+
   async submitVote(userId: string, dto: SubmitVoteDto) {
     const { electionId, selections } = dto;
 
@@ -177,11 +184,10 @@ export class ElectionService {
       where: { id: electionid },
       data: {
         status: nextstatus,
-        // Track when the election started or ended  for the report
-        ...(nextstatus === ElectionStatus.ONGOING && { startDate: new Date() }),
-        ...(nextstatus === ElectionStatus.COMPLETED && {
-          endDate: new Date(),
-        }),
+        // Only set startDate if it's going ONGOING for the FIRST time
+        ...(nextstatus === ElectionStatus.ONGOING &&
+          !election.startDate && { startDate: new Date() }),
+        ...(nextstatus === ElectionStatus.COMPLETED && { endDate: new Date() }),
       },
     });
   }

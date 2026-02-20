@@ -61,11 +61,13 @@ model Election {
   id            String         @id @default(cuid())
   title         String
   status        ElectionStatus @default(DRAFT)
-  eligibleTypes UserType[]     
+  eligibleTypes UserType[]
   positions     Position[]
   voterRecords  VoterRecord[]
   ballots       Ballot[]
   candidates Candidate[]
+  startDate      DateTime?
+  endDate        DateTime?
   createdAt DateTime @default(now())
   updatedAt  DateTime @updatedAt
 }

@@ -12,9 +12,9 @@ export class MockAuthGuard implements CanActivate {
     // 1. Manually set the "user" for testing.
     // FLIP THIS: Change to 'STUDENT' or 'ADMIN' depending on what you are testing.
     request.user = {
-      id: 'mock-id-123',
+      id: 'cmlurm9go00014k8la2n3pq2n',
       role: 'ADMIN',
-      identificationNumber: '22/0001',
+      identificationNumber: 'ADMIN-001',
     };
 
     // 2. Check if the endpoint has a @Roles() decorator

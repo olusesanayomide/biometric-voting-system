@@ -1,14 +1,12 @@
 import { Controller, Post, Body, Get, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { ApiOperation, ApiTags, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
+import { ApiOperation, ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { GetUser } from './decorators/get-user.decorator'; // You'll need this decorator
 import * as server from '@simplewebauthn/server';
 import { BiometricVerifyDto } from './dto/bio-verify.dto';
+import { LoginTestDto } from './dto/login-test.dto';
 
-class DevLoginDto {
-  identificationNumber: string;
-}
 @ApiTags('Authentication')
 @Controller('auth')
 export class AuthController {
@@ -59,10 +57,12 @@ export class AuthController {
   // Test Login (Bypass Biometrics)
   @Post('dev-login')
   @ApiOperation({ summary: 'DEVELOPER ONLY: Get a token without biometrics' })
-  @ApiBody({ type: DevLoginDto })
-  async devLogin(@Body('identificationNumber') id: string) {
+  // @ApiBody({ type: Logi nResponseDto })
+  async devLogin(@Body() logintestdto: LoginTestDto) {
     // Use your existing service to generate a token for this user
     // This assumes your authService has a method like 'generateToken' or 'login'
-    return this.authService.loginByIdentificationNumberTest(id);
+    return this.authService.loginByIdentificationNumberTest(
+      logintestdto.identificationNumber,
+    );
   }
 }
